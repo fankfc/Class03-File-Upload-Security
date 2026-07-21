@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card upload-card">
+    <h2>上传头像</h2>
+    <div class="upload-info">
+        <p>支持格式：<strong>JPG / PNG / GIF / WebP</strong>，最大 <strong>16MB</strong></p>
+    </div>
+    <form method="post" action="/upload" enctype="multipart/form-data" class="upload-form">
+        <div class="form-group">
+            <label for="file">选择头像文件</label>
+            <input type="file" id="file" name="file" class="form-input-file" accept=".jpg,.jpeg,.png,.gif,.webp">
+        </div>
+        {% if error %}
+            <p class="error-message">{{ error }}</p>
+        {% endif %}
+        <button type="submit" class="btn btn-primary btn-block">上传</button>
+    </form>
+
+    {% if uploaded_url %}
+        <div class="upload-result">
+            <h3>✅ 上传成功！</h3>
+            <div class="avatar-preview">
+                <img src="{{ uploaded_url }}" alt="头像预览" class="avatar-img">
+            </div>
+            <div class="file-info">
+                <p><span class="info-label">原始文件名：</span>{{ original_name }}</p>
+                <p><span class="info-label">存储文件名：</span><code>{{ filename }}</code></p>
+                <p><span class="info-label">访问 URL：</span></p>
+                <code class="file-url">{{ uploaded_url }}</code>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

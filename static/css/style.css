@@ -1,0 +1,362 @@
+/* 全局 reset 样式 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: #f5f7fa;
+    min-height: 100vh;
+    color: #333;
+}
+
+/* 导航栏样式 */
+.navbar {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 24px;
+    height: 60px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.nav-brand {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.nav-menu {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.nav-welcome {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.nav-link {
+    color: white;
+    text-decoration: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* 容器 */
+.container {
+    max-width: 600px;
+    margin: 40px auto;
+    padding: 0 16px;
+}
+
+/* 卡片样式 */
+.card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+    padding: 32px;
+    margin-bottom: 24px;
+}
+
+.card h2 {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.card h3 {
+    font-size: 18px;
+    margin-bottom: 16px;
+    color: #555;
+}
+
+.card p {
+    margin-bottom: 16px;
+    color: #666;
+}
+
+/* 表单样式 */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    color: #555;
+    font-weight: 500;
+}
+
+.form-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+    outline: none;
+}
+
+.form-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+.error-message {
+    color: #e74c3c;
+    font-size: 14px;
+    margin-bottom: 16px;
+    padding: 8px 12px;
+    background-color: #fde8e8;
+    border-radius: 4px;
+}
+
+/* 按钮样式 */
+.btn {
+    display: inline-block;
+    padding: 10px 24px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+    transition: background-color 0.2s;
+}
+
+.btn-primary {
+    background-color: #667eea;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #5a6fd6;
+}
+
+.btn-secondary {
+    background-color: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #7f8c8d;
+}
+
+.btn-block {
+    width: 100%;
+}
+
+/* 登录卡片 */
+.login-card {
+    max-width: 420px;
+    margin: 0 auto;
+}
+
+/* 用户信息列表 */
+.user-info {
+    margin-bottom: 24px;
+}
+
+.info-list {
+    list-style: none;
+    padding: 0;
+}
+
+.info-list li {
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 15px;
+}
+
+.info-list li:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    display: inline-block;
+    width: 80px;
+    color: #888;
+    font-weight: 500;
+}
+
+/* 注册卡片 */
+.register-card {
+    max-width: 420px;
+    margin: 0 auto;
+}
+
+.form-footer {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 14px;
+    color: #888;
+}
+
+.form-footer a {
+    color: #667eea;
+    text-decoration: none;
+}
+
+.form-footer a:hover {
+    text-decoration: underline;
+}
+
+/* 成功消息 */
+.success-message {
+    color: #27ae60;
+    font-size: 14px;
+    margin-bottom: 16px;
+    padding: 8px 12px;
+    background-color: #e8faf0;
+    border-radius: 4px;
+}
+
+/* 搜索功能 */
+.search-group {
+    display: flex;
+    gap: 8px;
+}
+
+.search-group .form-input {
+    flex: 1;
+}
+
+.search-group .btn {
+    white-space: nowrap;
+}
+
+.search-results {
+    margin-top: 20px;
+}
+
+.search-results h4 {
+    font-size: 15px;
+    color: #555;
+    margin-bottom: 12px;
+}
+
+.no-results {
+    color: #999;
+    font-size: 14px;
+    padding: 16px 0;
+    text-align: center;
+}
+
+/* 数据表格 */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.data-table thead {
+    background-color: #f8f9fa;
+}
+
+.data-table th {
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #555;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.data-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #f0f0f0;
+    color: #333;
+}
+
+.data-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* 按钮组 */
+.btn-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* 上传卡片 */
+.upload-card {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.upload-info {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 20px;
+    padding: 10px 14px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+
+.upload-form {
+    margin-bottom: 24px;
+}
+
+.form-input-file {
+    width: 100%;
+    padding: 8px 0;
+    font-size: 14px;
+    color: #555;
+}
+
+.upload-result {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.upload-result h3 {
+    color: #27ae60;
+    margin-bottom: 16px;
+}
+
+.avatar-preview {
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.avatar-img {
+    max-width: 200px;
+    max-height: 200px;
+    border-radius: 8px;
+    border: 2px solid #f0f0f0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.file-info {
+    font-size: 14px;
+    color: #555;
+}
+
+.file-info p {
+    margin-bottom: 6px;
+}
+
+.file-url {
+    display: block;
+    word-break: break-all;
+    background-color: #f8f9fa;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #667eea;
+    margin-top: 4px;
+}

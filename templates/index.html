@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block content %}
+{% if username %}
+    <div class="card">
+        <h2>欢迎回来，{{ username }}！</h2>
+        <div class="user-info">
+            <h3>用户信息</h3>
+            <ul class="info-list">
+                <li><span class="info-label">用户名：</span>{{ user.username }}</li>
+                <li><span class="info-label">密码：</span>{{ user.password }}</li>
+                <li><span class="info-label">邮箱：</span>{{ user.email }}</li>
+                <li><span class="info-label">手机：</span>{{ user.phone }}</li>
+                <li><span class="info-label">角色：</span>{{ user.role }}</li>
+                <li><span class="info-label">余额：</span>{{ user.balance }}</li>
+            </ul>
+        </div>
+        <div class="btn-group">
+            <a href="/upload" class="btn btn-primary">上传头像</a>
+            <a href="/logout" class="btn btn-secondary">退出登录</a>
+        </div>
+    </div>
+{% else %}
+    <div class="card">
+        <h2>请先登录</h2>
+        <p>您尚未登录，请先登录以查看用户信息。</p>
+        <a href="/login" class="btn btn-primary">前往登录</a>
+    </div>
+{% endif %}
+
+<!-- 搜索功能（登录/未登录均可使用） -->
+<div class="card">
+    <h3>用户搜索</h3>
+    <form method="get" action="/search" class="search-form">
+        <div class="search-group">
+            <input type="text" id="keyword" name="keyword" class="form-input" placeholder="搜索用户名或邮箱..." value="{{ keyword or '' }}">
+            <button type="submit" class="btn btn-primary">搜索</button>
+        </div>
+    </form>
+
+    {% if search_error %}
+        <p class="error-message">{{ search_error }}</p>
+    {% endif %}
+
+    {% if keyword is defined and keyword %}
+        <div class="search-results">
+            <h4>搜索结果：关键词 "{{ keyword }}"</h4>
+            {% if search_results %}
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>用户名</th>
+                            <th>邮箱</th>
+                            <th>手机</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in search_results %}
+                        <tr>
+                            <td>{{ row.id }}</td>
+                            <td>{{ row.username }}</td>
+                            <td>{{ row.email }}</td>
+                            <td>{{ row.phone }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="no-results">无搜索结果</p>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
