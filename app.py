@@ -71,26 +71,27 @@ def init_db():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
-    # 创建 users 表
+    # 创建 users 表（带 balance 字段，持久化余额）
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
             email TEXT,
-            phone TEXT
+            phone TEXT,
+            balance REAL DEFAULT 0
         )
     """)
 
     # 插入默认用户（密码以明文形式存储在 SQLite 中）
     # 使用 INSERT OR IGNORE 防止重复插入
     cursor.execute(
-        "INSERT OR IGNORE INTO users (username, password, email, phone) VALUES (?, ?, ?, ?)",
-        ("admin", "admin123", "admin@example.com", "13800138000")
+        "INSERT OR IGNORE INTO users (username, password, email, phone, balance) VALUES (?, ?, ?, ?, ?)",
+        ("admin", "admin123", "admin@example.com", "13800138000", 99999)
     )
     cursor.execute(
-        "INSERT OR IGNORE INTO users (username, password, email, phone) VALUES (?, ?, ?, ?)",
-        ("alice", "alice2025", "alice@example.com", "13900139001")
+        "INSERT OR IGNORE INTO users (username, password, email, phone, balance) VALUES (?, ?, ?, ?, ?)",
+        ("alice", "alice2025", "alice@example.com", "13900139001", 100)
     )
 
     conn.commit()
@@ -458,74 +459,191 @@ def upload():
                            original_name=original_name, error=error)
 
 
-# ----- 个人中心 -----
+# ----- 个人中心（安全加固版）-----
+
+# 充值操作的 IP 速率限制记录（独立计数器）
+_recharge_rate_records: dict[str, list[datetime]] = {}
+MAX_RECHARGE_PER_MINUTE = 3  # 每分钟最多充值 3 次
+MAX_RECHARGE_AMOUNT = 1000000  # 单次充值上限
+
+
+def _get_user_id_by_username(uname: str) -> int | None:
+    """根据用户名从 SQLite 查询 user_id"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM users WHERE username = ?", (uname,))
+        row = cursor.fetchone()
+        conn.close()
+        return row[0] if row else None
+    except Exception:
+        return None
+
+
+def _sync_balance_to_db(uname: str, balance: float):
+    """将余额持久化到 SQLite"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET balance = ? WHERE username = ?", (balance, uname))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"[DB SYNC ERROR] {e}")
+
+
+def _get_balance_from_db(uname: str) -> float:
+    """从 SQLite 读取余额"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT balance FROM users WHERE username = ?", (uname,))
+        row = cursor.fetchone()
+        conn.close()
+        return row[0] if row else 0
+    except Exception:
+        return 0
+
 
 @app.route("/profile")
 def profile():
     """
-    个人中心路由：
-    - 从 URL 参数获取 user_id（如 /profile?user_id=1）
-    - 根据 user_id 从 SQLite 查询用户资料
-    - 从 USERS 字典获取余额
-    - 不验证当前登录用户和要查询的 user_id 是否匹配
+    个人中心路由（安全加固版）：
+    - 需要登录才能访问，未登录跳转 /login
+    - 只能查看自己的用户资料（从 session 获取当前用户）
+    - 不从 URL 参数获取 user_id（防止越权）
     """
-    username = session.get("username")
+    current_user = session.get("username")
+    if not current_user:
+        return redirect("/login")
 
-    user_id = request.args.get("user_id", type=int)
     user_data = None
 
-    if user_id is not None:
-        try:
-            conn = sqlite3.connect(DB_PATH)
-            cursor = conn.cursor()
-            cursor.execute("SELECT id, username, email, phone FROM users WHERE id = ?", (user_id,))
-            row = cursor.fetchone()
-            conn.close()
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, username, email, phone, balance FROM users WHERE username = ?",
+                       (current_user,))
+        row = cursor.fetchone()
+        conn.close()
 
-            if row:
-                user_data = {
-                    "id": row[0],
-                    "username": row[1],
-                    "email": row[2],
-                    "phone": row[3],
-                    "balance": USERS.get(row[1], {}).get("balance", 0)
-                }
-        except Exception as e:
-            print(f"[PROFILE ERROR] {e}")
+        if row:
+            # 同步余额到 USERS 字典（保持登录功能一致性）
+            if current_user in USERS:
+                USERS[current_user]["balance"] = row[4]
 
-    return render_template("profile.html", username=username, user=user_data)
+            user_data = {
+                "id": row[0],
+                "username": row[1],
+                "email": row[2],
+                "phone": row[3],
+                "balance": row[4]
+            }
+    except Exception as e:
+        print(f"[PROFILE ERROR] {e}")
+
+    csrf_token = generate_csrf_token()
+    return render_template("profile.html", username=current_user, user=user_data, csrf_token=csrf_token)
 
 
-# ----- 充值 -----
+# ----- 充值（安全加固版）-----
 
 @app.route("/recharge", methods=["POST"])
 def recharge():
     """
-    充值路由：
-    - 从表单接收 user_id 和 amount 参数
-    - 直接修改用户数据中的余额字段：balance = balance + amount
-    - 不检查 amount 是否为负数
+    充值路由（安全加固版）：
+    - 需要登录才能访问，未登录跳转 /login
+    - 只能给自己充值（从 session 获取 user_id）
+    - 校验 CSRF Token
+    - 校验 amount 为正数
+    - 校验 amount 上限
+    - 充值速率限制
+    - 余额持久化到 SQLite
     """
-    user_id = request.form.get("user_id", type=int)
-    amount = request.form.get("amount", type=float, default=0)
+    current_user = session.get("username")
+    if not current_user:
+        return redirect("/login")
 
-    if user_id is not None:
-        try:
-            conn = sqlite3.connect(DB_PATH)
-            cursor = conn.cursor()
-            cursor.execute("SELECT username FROM users WHERE id = ?", (user_id,))
-            row = cursor.fetchone()
-            conn.close()
+    error = None
 
-            if row:
-                username = row[0]
-                if username in USERS:
-                    USERS[username]["balance"] = USERS[username]["balance"] + amount
-                    print(f"[RECHARGE] user_id={user_id}, username={username}, amount={amount}, new_balance={USERS[username]['balance']}")
-        except Exception as e:
-            print(f"[RECHARGE ERROR] {e}")
+    # 防护 1：CSRF Token 校验
+    if not validate_csrf_token():
+        error = "安全校验失败（CSRF Token 无效），请刷新页面重试"
 
-    return redirect(f"/profile?user_id={user_id}")
+    # 防护 2：充值速率限制
+    client_ip = request.remote_addr or "unknown"
+    now = datetime.now()
+    if client_ip in _recharge_rate_records:
+        _recharge_rate_records[client_ip] = [
+            t for t in _recharge_rate_records[client_ip]
+            if now - t < timedelta(minutes=1)
+        ]
+    else:
+        _recharge_rate_records[client_ip] = []
+
+    if not error and len(_recharge_rate_records[client_ip]) >= MAX_RECHARGE_PER_MINUTE:
+        error = "充值过于频繁，请稍后再试（每分钟最多 3 次）"
+
+    if not error:
+        amount = request.form.get("amount", type=float, default=0)
+
+        # 防护 3：金额正负校验 + 上限校验
+        if amount <= 0:
+            error = "充值金额必须为正数"
+        elif amount > MAX_RECHARGE_AMOUNT:
+            error = f"单次充值金额不能超过 {MAX_RECHARGE_AMOUNT}"
+
+        if not error:
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                cursor = conn.cursor()
+                cursor.execute("SELECT id, balance FROM users WHERE username = ?", (current_user,))
+                row = cursor.fetchone()
+                conn.close()
+
+                if row:
+                    user_id = row[0]
+                    old_balance = row[1]
+                    new_balance = old_balance + amount
+
+                    # 更新 USERS 字典
+                    if current_user in USERS:
+                        USERS[current_user]["balance"] = new_balance
+
+                    # 持久化到 SQLite
+                    _sync_balance_to_db(current_user, new_balance)
+
+                    _recharge_rate_records[client_ip].append(datetime.now())
+                    print(f"[RECHARGE] user={current_user}, amount={amount}, {old_balance} → {new_balance}")
+
+                    return redirect(f"/profile?recharge_success=1")
+
+            except Exception as e:
+                error = f"充值失败: {str(e)}"
+                print(f"[RECHARGE ERROR] {e}")
+
+    # 充值失败时回到个人中心并显示错误
+    csrf_token = generate_csrf_token()
+    user_data = _get_profile_data(current_user)
+    return render_template("profile.html", username=current_user, user=user_data,
+                           error=error, csrf_token=csrf_token)
+
+
+def _get_profile_data(uname: str) -> dict | None:
+    """获取用户资料的辅助函数"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, username, email, phone, balance FROM users WHERE username = ?",
+                       (uname,))
+        row = cursor.fetchone()
+        conn.close()
+        if row:
+            return {"id": row[0], "username": row[1], "email": row[2],
+                    "phone": row[3], "balance": row[4]}
+    except Exception:
+        pass
+    return None
 
 
 # ----- 登出 -----
