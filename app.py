@@ -458,6 +458,76 @@ def upload():
                            original_name=original_name, error=error)
 
 
+# ----- 个人中心 -----
+
+@app.route("/profile")
+def profile():
+    """
+    个人中心路由：
+    - 从 URL 参数获取 user_id（如 /profile?user_id=1）
+    - 根据 user_id 从 SQLite 查询用户资料
+    - 从 USERS 字典获取余额
+    - 不验证当前登录用户和要查询的 user_id 是否匹配
+    """
+    username = session.get("username")
+
+    user_id = request.args.get("user_id", type=int)
+    user_data = None
+
+    if user_id is not None:
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, username, email, phone FROM users WHERE id = ?", (user_id,))
+            row = cursor.fetchone()
+            conn.close()
+
+            if row:
+                user_data = {
+                    "id": row[0],
+                    "username": row[1],
+                    "email": row[2],
+                    "phone": row[3],
+                    "balance": USERS.get(row[1], {}).get("balance", 0)
+                }
+        except Exception as e:
+            print(f"[PROFILE ERROR] {e}")
+
+    return render_template("profile.html", username=username, user=user_data)
+
+
+# ----- 充值 -----
+
+@app.route("/recharge", methods=["POST"])
+def recharge():
+    """
+    充值路由：
+    - 从表单接收 user_id 和 amount 参数
+    - 直接修改用户数据中的余额字段：balance = balance + amount
+    - 不检查 amount 是否为负数
+    """
+    user_id = request.form.get("user_id", type=int)
+    amount = request.form.get("amount", type=float, default=0)
+
+    if user_id is not None:
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute("SELECT username FROM users WHERE id = ?", (user_id,))
+            row = cursor.fetchone()
+            conn.close()
+
+            if row:
+                username = row[0]
+                if username in USERS:
+                    USERS[username]["balance"] = USERS[username]["balance"] + amount
+                    print(f"[RECHARGE] user_id={user_id}, username={username}, amount={amount}, new_balance={USERS[username]['balance']}")
+        except Exception as e:
+            print(f"[RECHARGE ERROR] {e}")
+
+    return redirect(f"/profile?user_id={user_id}")
+
+
 # ----- 登出 -----
 
 @app.route("/logout")
